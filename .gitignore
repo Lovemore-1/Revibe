@@ -1,0 +1,10 @@
+node_modules
+.env.local
+android/
+.expo/
+dist/
+*.log
+.bun
+
+# Local env file with secrets (kept out of version control)
+.env
