@@ -10,9 +10,12 @@ import {
   Alert,
 } from "react-native";
 import { useMutation, useQuery } from "convex/react";
+import { useRouter } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import { api } from "@/convex/_generated/api";
-import { Screen, Card, Chip, PrimaryButton, StatPill, EmptyState, impactLight } from "@/components/revibe/ui";
-import { colors, moodOptions, postKinds } from "@/lib/revibe-theme";
+import { Screen, Card, Chip, PrimaryButton, EmptyState, impactLight } from "@/components/revibe/ui";
+import { colors, gradients, moodOptions, postKinds } from "@/lib/revibe-theme";
 import { Ionicons } from "@expo/vector-icons";
 import type { Id } from "@/convex/_generated/dataModel";
 
@@ -229,6 +232,8 @@ function PostCard({ post }: { post: Post }) {
 export default function HomeScreen() {
   const profile = useQuery(api.profiles.getMine);
   const posts = useQuery(api.posts.listFeed);
+  const entries = useQuery(api.journal.listMine);
+  const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
 
   const onRefresh = useCallback(async () => {
@@ -236,6 +241,16 @@ export default function HomeScreen() {
     // useQuery is reactive — just wait a tick for the re-render
     setTimeout(() => setRefreshing(false), 600);
   }, []);
+
+  // ── Live rehab streak (consecutive days with a check-in) ──────────────────
+  const entryDates = (entries ?? []).map((e) => e.entryDate);
+  const streak = computeStreak(entryDates);
+  const checkedInToday = entryDates.includes(todayStr());
+  const nextMilestone = STREAK_MILESTONES.find((m) => m > streak) ?? null;
+  const prevMilestone = [...STREAK_MILESTONES].reverse().find((m) => m <= streak) ?? 0;
+  const milestonePct = nextMilestone
+    ? Math.min(100, Math.round(((streak - prevMilestone) / (nextMilestone - prevMilestone)) * 100))
+    : 100;
 
   return (
     <Screen>
@@ -250,24 +265,63 @@ export default function HomeScreen() {
           />
         }
       >
-        {/* Hero */}
-        {profile && (
-          <Card style={styles.heroCard}>
-            <Text style={styles.heroGreeting}>
-              Hey, {profile.displayName.split(" ")[0]} 👋
+        {/* Streak hero */}
+        <Animated.View entering={FadeInDown.duration(300).springify()} style={styles.heroWrap}>
+          <LinearGradient
+            colors={gradients.hero}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.hero}
+          >
+            <View style={styles.heroTopRow}>
+              <Text style={styles.heroGreeting}>
+                Hey, {profile?.displayName?.split(" ")[0] ?? "there"} 👋
+              </Text>
+              <View style={styles.heroMilestonePill}>
+                <Ionicons name="ribbon" size={13} color="#fff" />
+                <Text style={styles.heroMilestoneText}>{profile?.milestonesAchieved ?? 0}</Text>
+              </View>
+            </View>
+
+            <View style={styles.streakRow}>
+              <Text style={styles.streakFlame}>🔥</Text>
+              <View>
+                <Text style={styles.streakNumber}>{streak}</Text>
+                <Text style={styles.streakLabel}>
+                  {streak === 0 ? "start your streak today" : "day rehab streak"}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.heroProgressTrack}>
+              <View style={[styles.heroProgressFill, { width: `${milestonePct}%` }]} />
+            </View>
+            <Text style={styles.heroProgressText}>
+              {nextMilestone
+                ? `${nextMilestone - streak} day${nextMilestone - streak === 1 ? "" : "s"} to your ${nextMilestone}-day milestone`
+                : "You've reached every milestone — incredible 🎉"}
             </Text>
-            <Text style={styles.heroTagline}>Recovery together.</Text>
-            <View style={styles.heroStats}>
-              <StatPill label="Day streak" value={String(profile.recoveryStreak)} />
-              <StatPill label="Milestones" value={String(profile.milestonesAchieved)} />
-              <StatPill label="Progress" value={`${profile.recoveryProgress}%`} />
-            </View>
-            {/* Progress bar */}
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: `${profile.recoveryProgress}%` }]} />
-            </View>
-          </Card>
-        )}
+
+            {checkedInToday ? (
+              <View style={styles.checkedInPill}>
+                <Ionicons name="checkmark-circle" size={18} color="#fff" />
+                <Text style={styles.checkedInText}>Checked in today — keep it going</Text>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={styles.checkInBtn}
+                onPress={() => {
+                  impactLight();
+                  router.push("/journal");
+                }}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="add-circle" size={18} color={colors.lavender} />
+                <Text style={styles.checkInBtnText}>Check in today</Text>
+              </TouchableOpacity>
+            )}
+          </LinearGradient>
+        </Animated.View>
 
         <Composer onPost={() => {}} />
 
@@ -300,25 +354,108 @@ function getTimeAgo(ts: number): string {
   return `${Math.floor(h / 24)}d ago`;
 }
 
+// ── Streak helpers ──────────────────────────────────────────────────────────
+const STREAK_MILESTONES = [3, 7, 14, 30, 60, 90, 180, 365];
+
+/** Today's date as YYYY-MM-DD (UTC, matching how journal entryDate is stored). */
+function todayStr(): string {
+  return new Date().toISOString().split("T")[0];
+}
+
+/**
+ * Consecutive-day check-in streak from journal entry dates (YYYY-MM-DD).
+ * Today not yet logged doesn't break the streak — it continues from yesterday
+ * until a full day is missed.
+ */
+function computeStreak(dates: string[]): number {
+  if (dates.length === 0) return 0;
+  const set = new Set(dates);
+  const fmt = (d: Date) => d.toISOString().split("T")[0];
+  const cursor = new Date();
+  if (!set.has(fmt(cursor))) {
+    cursor.setUTCDate(cursor.getUTCDate() - 1);
+    if (!set.has(fmt(cursor))) return 0;
+  }
+  let streak = 0;
+  while (set.has(fmt(cursor))) {
+    streak++;
+    cursor.setUTCDate(cursor.getUTCDate() - 1);
+  }
+  return streak;
+}
+
 // ---------------------------------------------------------------------------
 // Styles
 // ---------------------------------------------------------------------------
 const styles = StyleSheet.create({
-  heroCard: { marginBottom: 12 },
-  heroGreeting: { fontSize: 20, fontWeight: "800", color: colors.ink },
-  heroTagline: { color: colors.muted, fontSize: 13, marginTop: 2, marginBottom: 14 },
-  heroStats: { flexDirection: "row", gap: 8, marginBottom: 12 },
-  progressBar: {
+  heroWrap: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderRadius: 20,
+    overflow: "hidden",
+    shadowColor: colors.lavender,
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
+  },
+  hero: { padding: 20 },
+  heroTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  heroGreeting: { fontSize: 16, fontWeight: "800", color: "#fff" },
+  heroMilestonePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  heroMilestoneText: { color: "#fff", fontWeight: "800", fontSize: 13 },
+  streakRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 16,
+    marginBottom: 14,
+  },
+  streakFlame: { fontSize: 44 },
+  streakNumber: { color: "#fff", fontSize: 44, fontWeight: "900", lineHeight: 48 },
+  streakLabel: { color: "rgba(255,255,255,0.85)", fontSize: 13, marginTop: -2 },
+  heroProgressTrack: {
     height: 6,
-    backgroundColor: colors.soft,
+    backgroundColor: "rgba(255,255,255,0.25)",
     borderRadius: 3,
     overflow: "hidden",
   },
-  progressFill: {
-    height: "100%",
-    backgroundColor: colors.lavender,
-    borderRadius: 3,
+  heroProgressFill: { height: "100%", backgroundColor: "#fff", borderRadius: 3 },
+  heroProgressText: { color: "rgba(255,255,255,0.9)", fontSize: 12, marginTop: 8 },
+  checkInBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    paddingVertical: 12,
+    marginTop: 16,
   },
+  checkInBtnText: { color: colors.lavender, fontWeight: "700", fontSize: 15 },
+  checkedInPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: "rgba(255,255,255,0.18)",
+    borderRadius: 12,
+    paddingVertical: 12,
+    marginTop: 16,
+  },
+  checkedInText: { color: "#fff", fontWeight: "600", fontSize: 14 },
 
   composerCard: { marginBottom: 12 },
   composerLabel: { fontWeight: "700", color: colors.ink, marginBottom: 8 },
