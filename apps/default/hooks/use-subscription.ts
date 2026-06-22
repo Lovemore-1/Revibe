@@ -8,6 +8,8 @@ export interface SubscriptionStatus {
   currentPeriodEnd?: number;
   cancelAtPeriodEnd?: boolean;
   isLoading: boolean;
+  /** True when everyone has full access for free during launch (no real subscription). */
+  freeLaunch: boolean;
 }
 
 /**
@@ -31,12 +33,12 @@ export function useSubscription(): SubscriptionStatus {
   const result = useQuery(api.subscriptions.getMine);
 
   if (FREE_LAUNCH_MODE) {
-    return { isPro: true, tier: "pro", status: "active", isLoading: false };
+    return { isPro: true, tier: "pro", status: "active", isLoading: false, freeLaunch: true };
   }
 
   if (result === undefined) {
-    return { isPro: false, tier: "free", isLoading: true };
+    return { isPro: false, tier: "free", isLoading: true, freeLaunch: false };
   }
 
-  return { ...result, isLoading: false };
+  return { ...result, isLoading: false, freeLaunch: false };
 }

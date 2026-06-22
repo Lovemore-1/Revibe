@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -18,6 +17,7 @@ import { useRouter } from "expo-router";
 import { useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { colors, gradients } from "@/lib/revibe-theme";
+import { notify } from "@/components/revibe/ui";
 
 /**
  * AI Recovery Coach chat. Messages persist in Convex (api.coach.listMine is
@@ -48,7 +48,7 @@ export default function CoachScreen() {
     } catch (e: any) {
       const msg =
         e?.data ?? e?.message ?? "Couldn't reach the coach. Please try again.";
-      Alert.alert("Coach unavailable", String(msg));
+      notify("Coach unavailable", String(msg));
       setDraft(text); // restore so they don't lose what they typed
     } finally {
       setSending(false);

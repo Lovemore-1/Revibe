@@ -7,6 +7,8 @@ import {
   ScrollView,
   ActivityIndicator,
   ViewStyle,
+  Alert,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -18,6 +20,46 @@ import { colors, gradients } from "@/lib/revibe-theme";
 
 export function impactLight() {
   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+}
+
+// react-native-web does NOT implement Alert.alert (it's a silent no-op), which
+// breaks every confirmation dialog on web. These fall back to the browser's
+// window.confirm / window.alert on web, and use Alert on native.
+
+export function confirmAction(opts: {
+  title: string;
+  message?: string;
+  confirmText?: string;
+  cancelText?: string;
+  destructive?: boolean;
+  onConfirm: () => void;
+}) {
+  const {
+    title,
+    message,
+    confirmText = "OK",
+    cancelText = "Cancel",
+    destructive,
+    onConfirm,
+  } = opts;
+  if (Platform.OS === "web") {
+    if (typeof window !== "undefined" && window.confirm(message ? `${title}\n\n${message}` : title)) {
+      onConfirm();
+    }
+    return;
+  }
+  Alert.alert(title, message, [
+    { text: cancelText, style: "cancel" },
+    { text: confirmText, style: destructive ? "destructive" : "default", onPress: onConfirm },
+  ]);
+}
+
+export function notify(title: string, message?: string) {
+  if (Platform.OS === "web") {
+    if (typeof window !== "undefined") window.alert(message ? `${title}\n\n${message}` : title);
+    return;
+  }
+  Alert.alert(title, message);
 }
 
 // ─── Screen ───────────────────────────────────────────────────────────────────

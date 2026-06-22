@@ -7,11 +7,10 @@ import {
   TouchableOpacity,
   TextInput,
   RefreshControl,
-  Alert,
 } from "react-native";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Screen, Card, Chip, PrimaryButton } from "@/components/revibe/ui";
+import { Screen, Card, Chip, PrimaryButton, notify } from "@/components/revibe/ui";
 import { colors, moodOptions, postKinds } from "@/lib/revibe-theme";
 import { Ionicons } from "@expo/vector-icons";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -68,7 +67,7 @@ function CommunityComposer({
       setBody("");
       onPost();
     } catch (e: any) {
-      Alert.alert("Couldn't post", e.message);
+      notify("Couldn't post", e.message);
     } finally {
       setLoading(false);
     }

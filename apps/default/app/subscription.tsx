@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Alert,
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -15,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useSubscription } from "@/hooks/use-subscription";
+import { confirmAction, notify } from "@/components/revibe/ui";
 import { colors } from "@/lib/revibe-theme";
 import * as Haptics from "expo-haptics";
 
@@ -75,7 +75,7 @@ const PRO_FEATURES = [
 // ---------------------------------------------------------------------------
 export default function SubscriptionScreen() {
   const router = useRouter();
-  const { isPro, currentPeriodEnd, cancelAtPeriodEnd } = useSubscription();
+  const { isPro, currentPeriodEnd, cancelAtPeriodEnd, freeLaunch } = useSubscription();
   const activateSubscription = useMutation(api.subscriptions.activateSubscription);
   const cancelSubscription = useMutation(api.subscriptions.cancelSubscription);
 
@@ -107,36 +107,31 @@ export default function SubscriptionScreen() {
       });
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert("Welcome to Pro! 🎉", "You now have full access to all Revibe Pro features.", [
-        { text: "Let's go", onPress: () => router.back() },
-      ]);
+      notify("Welcome to Pro! 🎉", "You now have full access to all Revibe Pro features.");
+      router.back();
     } catch (err: unknown) {
-      Alert.alert("Something went wrong", (err as Error).message ?? "Please try again.");
+      notify("Something went wrong", (err as Error).message ?? "Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleCancel = () => {
-    Alert.alert(
-      "Cancel Subscription?",
-      "You'll keep Pro access until the end of your billing period.",
-      [
-        { text: "Keep Pro", style: "cancel" },
-        {
-          text: "Cancel Renewal",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await cancelSubscription();
-              Alert.alert("Subscription cancelled", "You'll keep access until your period ends.");
-            } catch {
-              Alert.alert("Error", "Could not cancel. Please try again.");
-            }
-          },
-        },
-      ],
-    );
+    confirmAction({
+      title: "Cancel subscription?",
+      message: "You'll keep Pro access until the end of your billing period.",
+      confirmText: "Cancel renewal",
+      cancelText: "Keep Pro",
+      destructive: true,
+      onConfirm: async () => {
+        try {
+          await cancelSubscription();
+          notify("Subscription cancelled", "You'll keep access until your period ends.");
+        } catch {
+          notify("Error", "Could not cancel. Please try again.");
+        }
+      },
+    });
   };
 
   // ── Render ─────────────────────────────────────────────────────────────
@@ -172,8 +167,14 @@ export default function SubscriptionScreen() {
           <View style={styles.activeCard}>
             <Ionicons name="checkmark-circle" size={20} color={colors.teal} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.activeTitle}>You're on Revibe Pro 🎉</Text>
-              {currentPeriodEnd ? (
+              <Text style={styles.activeTitle}>
+                {freeLaunch ? "Full access — free during launch 🎉" : "You're on Revibe Pro 🎉"}
+              </Text>
+              {freeLaunch ? (
+                <Text style={styles.activeSub}>
+                  Everything&apos;s unlocked. No payment or subscription needed.
+                </Text>
+              ) : currentPeriodEnd ? (
                 <Text style={styles.activeSub}>
                   {cancelAtPeriodEnd ? "Ends" : "Renews"}{" "}
                   {new Date(currentPeriodEnd).toLocaleDateString("en-US", {
@@ -275,6 +276,7 @@ export default function SubscriptionScreen() {
             </TouchableOpacity>
           </>
         ) : (
+          !freeLaunch &&
           !cancelAtPeriodEnd && (
             <TouchableOpacity style={styles.cancelLink} onPress={handleCancel}>
               <Text style={styles.cancelLinkText}>Cancel subscription</Text>

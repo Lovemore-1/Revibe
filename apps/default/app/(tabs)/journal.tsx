@@ -7,11 +7,10 @@ import {
   TouchableOpacity,
   TextInput,
   RefreshControl,
-  Alert,
 } from "react-native";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Screen, Card, PrimaryButton } from "@/components/revibe/ui";
+import { Screen, Card, PrimaryButton, notify } from "@/components/revibe/ui";
 import { SubscriptionGate } from "@/components/revibe/subscription-gate";
 import { colors, moodOptions } from "@/lib/revibe-theme";
 import { Ionicons } from "@expo/vector-icons";
@@ -150,7 +149,7 @@ export default function JournalScreen() {
       setNote("");
       setMilestone("");
     } catch (e: any) {
-      Alert.alert("Couldn't save entry", e.message);
+      notify("Couldn't save entry", e.message);
     } finally {
       setLoading(false);
     }

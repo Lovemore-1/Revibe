@@ -7,14 +7,13 @@ import {
   TouchableOpacity,
   TextInput,
   RefreshControl,
-  Alert,
 } from "react-native";
 import { useMutation, useQuery } from "convex/react";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { api } from "@/convex/_generated/api";
-import { Screen, Card, Chip, PrimaryButton, EmptyState, impactLight } from "@/components/revibe/ui";
+import { Screen, Card, Chip, PrimaryButton, EmptyState, impactLight, notify } from "@/components/revibe/ui";
 import { colors, gradients, moodOptions, postKinds } from "@/lib/revibe-theme";
 import { Ionicons } from "@expo/vector-icons";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -58,7 +57,7 @@ function Composer({ onPost }: { onPost: () => void }) {
       onPost();
       impactLight();
     } catch (e: any) {
-      Alert.alert("Couldn't post", e.message);
+      notify("Couldn't post", e.message);
     } finally {
       setLoading(false);
     }
@@ -130,7 +129,7 @@ function PostCard({ post }: { post: Post }) {
       await addComment({ postId: post._id, body: commentText.trim() });
       setCommentText("");
     } catch (e: any) {
-      Alert.alert("Error", e.message);
+      notify("Error", e.message);
     }
   };
 

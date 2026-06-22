@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Alert,
   RefreshControl,
   Modal,
   KeyboardAvoidingView,
@@ -18,7 +17,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { api } from "@/convex/_generated/api";
-import { Screen, Card, StatPill } from "@/components/revibe/ui";
+import { Screen, Card, StatPill, confirmAction, notify } from "@/components/revibe/ui";
 import { colors, recoveryStages } from "@/lib/revibe-theme";
 import { useSubscription } from "@/hooks/use-subscription";
 
@@ -28,7 +27,7 @@ export default function ProfileScreen() {
   const profile = useQuery(api.profiles.getMine);
   const journalStats = useQuery(api.journal.stats);
   const updateProfile = useMutation(api.profiles.updateProfile);
-  const { isPro } = useSubscription();
+  const { isPro, freeLaunch } = useSubscription();
 
   const [refreshing, setRefreshing] = useState(false);
   const [editModal, setEditModal] = useState(false);
@@ -48,7 +47,7 @@ export default function ProfileScreen() {
   const saveEdit = async () => {
     const progress = parseInt(editProgress, 10);
     if (isNaN(progress) || progress < 0 || progress > 100) {
-      Alert.alert("Invalid progress", "Enter a number between 0 and 100.");
+      notify("Invalid progress", "Enter a number between 0 and 100.");
       return;
     }
     setSaving(true);
@@ -60,7 +59,7 @@ export default function ProfileScreen() {
       });
       setEditModal(false);
     } catch (e: any) {
-      Alert.alert("Couldn't save", e.message);
+      notify("Couldn't save", e.message);
     } finally {
       setSaving(false);
     }
@@ -195,7 +194,11 @@ export default function ProfileScreen() {
             <View style={{ flex: 1 }}>
               <Text style={styles.subTitle}>{isPro ? "Revibe Pro" : "Upgrade to Pro"}</Text>
               <Text style={styles.subSubtitle}>
-                {isPro ? "Manage your subscription" : "Unlock advanced analytics, unlimited DMs & more"}
+                {freeLaunch
+                  ? "Full access — free during launch 🎉"
+                  : isPro
+                  ? "Manage your subscription"
+                  : "Unlock advanced analytics, unlimited DMs & more"}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={colors.muted} />
@@ -206,12 +209,17 @@ export default function ProfileScreen() {
         <Card>
           <TouchableOpacity
             style={styles.signOutBtn}
-            onPress={() => {
-              Alert.alert("Sign out", "Are you sure you want to sign out?", [
-                { text: "Cancel", style: "cancel" },
-                { text: "Sign out", style: "destructive", onPress: () => signOut() },
-              ]);
-            }}
+            onPress={() =>
+              confirmAction({
+                title: "Sign out",
+                message: "Are you sure you want to sign out?",
+                confirmText: "Sign out",
+                destructive: true,
+                onConfirm: () => {
+                  void signOut();
+                },
+              })
+            }
           >
             <Ionicons name="log-out-outline" size={18} color={colors.coral} />
             <Text style={styles.signOutText}>Sign out</Text>

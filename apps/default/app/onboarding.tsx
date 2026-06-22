@@ -6,7 +6,6 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
@@ -15,7 +14,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { PrimaryButton } from "@/components/revibe/ui";
+import { PrimaryButton, notify } from "@/components/revibe/ui";
 import {
   colors,
   gradients,
@@ -57,7 +56,7 @@ export default function OnboardingScreen() {
 
   const handleNext = () => {
     if (step === 1 && !injuryType.trim()) {
-      Alert.alert("Tell us about your injury", "Please describe your injury or condition.");
+      notify("Tell us about your injury", "Please describe your injury or condition.");
       return;
     }
     setStep((s) => s + 1);
@@ -76,7 +75,7 @@ export default function OnboardingScreen() {
       });
       router.replace("/(tabs)");
     } catch (err: any) {
-      Alert.alert("Couldn't save", err.message);
+      notify("Couldn't save", err.message);
     } finally {
       setLoading(false);
     }

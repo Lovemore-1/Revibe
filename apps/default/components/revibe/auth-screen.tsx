@@ -8,7 +8,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -17,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useOAuthSignIn } from "@/hooks/use-oauth-sign-in";
 import { colors, gradients } from "@/lib/revibe-theme";
+import { notify } from "./ui";
 
 export function AuthScreen() {
   const { signIn } = useAuthActions();
@@ -29,7 +29,7 @@ export function AuthScreen() {
 
   const handleEmailAuth = async () => {
     if (!email.trim() || !password) {
-      Alert.alert("Missing fields", "Please enter your email and password.");
+      notify("Missing fields", "Please enter your email and password.");
       return;
     }
     setLoading(true);
@@ -40,7 +40,7 @@ export function AuthScreen() {
         flow: mode,
       });
     } catch (err: any) {
-      Alert.alert(
+      notify(
         mode === "signIn" ? "Sign in failed" : "Sign up failed",
         err.message ?? "Please check your details and try again.",
       );
@@ -54,7 +54,7 @@ export function AuthScreen() {
     try {
       await signInWith(provider);
     } catch (err: any) {
-      Alert.alert("OAuth error", err.message ?? "Could not sign in.");
+      notify("OAuth error", err.message ?? "Could not sign in.");
     } finally {
       setLoading(false);
     }
@@ -65,7 +65,7 @@ export function AuthScreen() {
     try {
       await signIn("anonymous");
     } catch (err: any) {
-      Alert.alert("Error", err.message);
+      notify("Error", err.message);
     } finally {
       setLoading(false);
     }
