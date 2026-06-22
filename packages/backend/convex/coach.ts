@@ -6,15 +6,19 @@ import { authQuery, authAction } from "./functions";
 /**
  * AI Recovery Coach — a warm, 24/7 companion for physical-rehab recovery.
  *
- * Calls the Anthropic Messages API directly via fetch (no SDK dependency, so it
- * bundles cleanly into Convex). Requires the ANTHROPIC_API_KEY environment
- * variable to be set on the Convex deployment:
+ * Calls Google Gemini's free-tier API directly via fetch (no SDK dependency, no
+ * billing required). Requires the GEMINI_API_KEY environment variable to be set
+ * on the Convex deployment:
  *
- *   npx convex env set ANTHROPIC_API_KEY sk-ant-...
+ *   npx convex env set GEMINI_API_KEY <your-gemini-key>
+ *
+ * Get a free key at https://aistudio.google.com/apikey (or reuse a Gemini API
+ * key from Google Cloud → Credentials).
  */
 
-// Swap to "claude-haiku-4-5" to cut cost ~5x (lower quality replies).
-const COACH_MODEL = "claude-opus-4-8";
+// Free-tier Gemini model. "gemini-2.0-flash" and "gemini-1.5-flash" are both on
+// the free tier; change here if Google updates model names.
+const GEMINI_MODEL = "gemini-2.0-flash";
 const MAX_HISTORY = 20;
 
 // ── Reactive history for the chat UI ─────────────────────────────────────────
@@ -117,10 +121,10 @@ export const send = authAction({
     if (text.length === 0) throw new ConvexError("Message is empty.");
     if (text.length > 4000) throw new ConvexError("Message is too long.");
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       throw new ConvexError(
-        "The recovery coach isn't switched on yet. (Set ANTHROPIC_API_KEY on the Convex deployment.)",
+        "The recovery coach isn't switched on yet. (Set GEMINI_API_KEY on the Convex deployment.)",
       );
     }
 
@@ -149,36 +153,37 @@ export const send = authAction({
       "If someone expresses thoughts of self-harm or crisis, gently urge them to contact local emergency services or a crisis line right away.",
     ].join("\n\n");
 
-    const resp = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: system }] },
+          // Gemini uses "model" for the assistant role and "user" for the user.
+          contents: history.map((m) => ({
+            role: m.role === "assistant" ? "model" : "user",
+            parts: [{ text: m.content }],
+          })),
+          generationConfig: { maxOutputTokens: 1024, temperature: 0.7 },
+        }),
       },
-      body: JSON.stringify({
-        model: COACH_MODEL,
-        max_tokens: 1024,
-        system,
-        messages: history.map((m) => ({ role: m.role, content: m.content })),
-      }),
-    });
+    );
 
     if (!resp.ok) {
       const detail = await resp.text().catch(() => "");
-      console.error("Anthropic API error", resp.status, detail);
+      console.error("Gemini API error", resp.status, detail);
       throw new ConvexError(
         "The coach couldn't respond right now. Please try again in a moment.",
       );
     }
 
     const data = (await resp.json()) as {
-      content?: Array<{ type: string; text?: string }>;
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
     };
     const reply =
-      data.content
-        ?.filter((b) => b.type === "text")
-        .map((b) => b.text ?? "")
+      data.candidates?.[0]?.content?.parts
+        ?.map((p) => p.text ?? "")
         .join("")
         .trim() || "I'm here with you.";
 
