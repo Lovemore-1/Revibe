@@ -103,6 +103,14 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_conversationId", ["conversationId"]),
 
+  // ── AI Recovery Coach ────────────────────────────────────────────────────
+  coachMessages: defineTable({
+    userId: v.id("users"),
+    role: v.union(v.literal("user"), v.literal("assistant")),
+    content: v.string(),
+    createdAt: v.number(),
+  }).index("by_userId", ["userId"]),
+
   // ── Subscriptions ────────────────────────────────────────────────────────
   subscriptions: defineTable({
     userId: v.id("users"),

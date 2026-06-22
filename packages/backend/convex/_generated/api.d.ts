@@ -9,6 +9,7 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as coach from "../coach.js";
 import type * as communities from "../communities.js";
 import type * as communityData from "../communityData.js";
 import type * as env from "../env.js";
@@ -32,6 +33,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  coach: typeof coach;
   communities: typeof communities;
   communityData: typeof communityData;
   env: typeof env;

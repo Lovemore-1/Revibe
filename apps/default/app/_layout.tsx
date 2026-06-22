@@ -29,6 +29,11 @@ export default function RootLayout() {
           name="subscription"
           options={{ presentation: "modal", headerShown: false }}
         />
+        <Stack.Screen
+          name="support"
+          options={{ presentation: "modal", headerShown: false }}
+        />
+        <Stack.Screen name="coach" options={{ headerShown: false }} />
       </Stack>
     </ConvexAuthProvider>
   );

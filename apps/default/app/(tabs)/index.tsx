@@ -323,6 +323,39 @@ export default function HomeScreen() {
           </LinearGradient>
         </Animated.View>
 
+        {/* Recovery coach */}
+        <TouchableOpacity
+          style={styles.coachBtn}
+          onPress={() => {
+            impactLight();
+            router.push("/coach");
+          }}
+          activeOpacity={0.9}
+        >
+          <View style={styles.coachIcon}>
+            <Ionicons name="sparkles" size={18} color="#fff" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.coachTitle}>Talk to your Recovery Coach</Text>
+            <Text style={styles.coachSub}>AI support, any time you need it</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={colors.lavender} />
+        </TouchableOpacity>
+
+        {/* Tough-day support */}
+        <TouchableOpacity
+          style={styles.toughDayBtn}
+          onPress={() => {
+            impactLight();
+            router.push("/support");
+          }}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="heart-circle" size={20} color={colors.coral} />
+          <Text style={styles.toughDayText}>Having a tough day?</Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+        </TouchableOpacity>
+
         <Composer onPost={() => {}} />
 
         {/* Feed */}
@@ -456,6 +489,45 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   checkedInText: { color: "#fff", fontWeight: "600", fontSize: 14 },
+
+  coachBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: colors.lavender + "12",
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginHorizontal: 16,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: colors.lavender + "33",
+  },
+  coachIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.lavender,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  coachTitle: { color: colors.ink, fontWeight: "700", fontSize: 14 },
+  coachSub: { color: colors.muted, fontSize: 12, marginTop: 1 },
+
+  toughDayBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.coral + "33",
+  },
+  toughDayText: { flex: 1, color: colors.ink, fontWeight: "700", fontSize: 14 },
 
   composerCard: { marginBottom: 12 },
   composerLabel: { fontWeight: "700", color: colors.ink, marginBottom: 8 },
