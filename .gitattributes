@@ -1,0 +1,6 @@
+# Language stats: don't count boilerplate/generated files (GitHub Linguist)
+*.html linguist-detectable=false
+dist/** linguist-generated=true
+web-build/** linguist-generated=true
+coverage/** linguist-generated=true
+*.lock linguist-generated=true
