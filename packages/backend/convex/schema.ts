@@ -122,6 +122,17 @@ export default defineSchema({
     .index("by_userId", ["userId"])
     .index("by_providerSubscriptionId", ["providerSubscriptionId"]),
 
+  // ── AI Recovery Coach ────────────────────────────────────────────────────
+  // Free, local rule-based chat companion (see convex/coach.ts) — no external
+  // LLM/API key. Restored here after it was accidentally dropped when
+  // schema.ts was overwritten from a parallel branch on 2026-07-05.
+  coachMessages: defineTable({
+    userId: v.id("users"),
+    role: v.union(v.literal("user"), v.literal("assistant")),
+    content: v.string(),
+    createdAt: v.number(),
+  }).index("by_userId", ["userId"]),
+
   // ── Recovery plans ───────────────────────────────────────────────────────
   // The plan the user's own physio/surgeon gave them, entered by the user.
   // The app structures and tracks it — it does not generate medical advice.
