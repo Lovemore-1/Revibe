@@ -103,14 +103,6 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_conversationId", ["conversationId"]),
 
-  // ── AI Recovery Coach ────────────────────────────────────────────────────
-  coachMessages: defineTable({
-    userId: v.id("users"),
-    role: v.union(v.literal("user"), v.literal("assistant")),
-    content: v.string(),
-    createdAt: v.number(),
-  }).index("by_userId", ["userId"]),
-
   // ── Subscriptions ────────────────────────────────────────────────────────
   subscriptions: defineTable({
     userId: v.id("users"),
@@ -129,4 +121,32 @@ export default defineSchema({
   })
     .index("by_userId", ["userId"])
     .index("by_providerSubscriptionId", ["providerSubscriptionId"]),
+
+  // ── Recovery plans ───────────────────────────────────────────────────────
+  // The plan the user's own physio/surgeon gave them, entered by the user.
+  // The app structures and tracks it — it does not generate medical advice.
+  recoveryPlans: defineTable({
+    userId: v.id("users"),
+    /** e.g. "ACL rehab protocol" */
+    title: v.string(),
+    /** Who prescribed it, e.g. "Dr. Smith / City Physio" */
+    source: v.string(),
+    /** Free-form notes, precautions, do-nots from the care team */
+    notes: v.string(),
+    phases: v.array(
+      v.object({
+        /** e.g. "Weeks 1–2: Reduce swelling" */
+        name: v.string(),
+        tasks: v.array(
+          v.object({
+            id: v.string(),
+            label: v.string(),
+            done: v.boolean(),
+          }),
+        ),
+      }),
+    ),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_userId", ["userId"]),
 });

@@ -6,6 +6,7 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
+  Alert,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
@@ -14,21 +15,23 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { PrimaryButton, notify } from "@/components/revibe/ui";
+import { PrimaryButton } from "@/components/revibe/ui";
 import {
-  colors,
-  gradients,
   goalOptions,
   moodOptions,
   recoveryStages,
   supportGroups,
+  type ThemeColors,
 } from "@/lib/revibe-theme";
+import { useTheme, useThemedStyles } from "@/lib/theme-context";
 
 const STEPS = ["Welcome", "Injury", "Goals", "Done"] as const;
 
 export default function OnboardingScreen() {
   const router = useRouter();
   const completeOnboarding = useMutation(api.profiles.completeOnboarding);
+  const { gradients } = useTheme();
+  const styles = useThemedStyles(makeStyles);
 
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -56,7 +59,7 @@ export default function OnboardingScreen() {
 
   const handleNext = () => {
     if (step === 1 && !injuryType.trim()) {
-      notify("Tell us about your injury", "Please describe your injury or condition.");
+      Alert.alert("Tell us about your injury", "Please describe your injury or condition.");
       return;
     }
     setStep((s) => s + 1);
@@ -75,7 +78,7 @@ export default function OnboardingScreen() {
       });
       router.replace("/(tabs)");
     } catch (err: any) {
-      notify("Couldn't save", err.message);
+      Alert.alert("Couldn't save", err.message);
     } finally {
       setLoading(false);
     }
@@ -149,6 +152,8 @@ function StepWelcome({
   setDisplayName: (v: string) => void;
   onNext: () => void;
 }) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.stepContainer}>
       <Text style={styles.stepEmoji}>👋</Text>
@@ -179,6 +184,8 @@ function StepInjury({
   setEmotionalState,
   onNext,
 }: any) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.stepContainer}>
       <Text style={styles.stepEmoji}>🩹</Text>
@@ -231,6 +238,7 @@ function StepInjury({
 }
 
 function StepGoals({ selectedGoals, toggleGoal, selectedGroups, toggleGroup, onSubmit, loading }: any) {
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.stepContainer}>
       <Text style={styles.stepEmoji}>🎯</Text>
@@ -274,7 +282,8 @@ function StepGoals({ selectedGoals, toggleGoal, selectedGroups, toggleGroup, onS
 
 // ── Styles ─────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   progressRow: {
     flexDirection: "row",
     justifyContent: "center",
@@ -299,7 +308,7 @@ const styles = StyleSheet.create({
 
   fieldLabel: { fontWeight: "700", color: colors.ink, fontSize: 14, marginBottom: 10, marginTop: 16 },
   input: {
-    backgroundColor: "#fff",
+    backgroundColor: colors.card,
     borderRadius: 14,
     borderWidth: 1.5,
     borderColor: colors.soft,
@@ -317,7 +326,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    backgroundColor: "#fff",
+    backgroundColor: colors.card,
   },
   optionChipActive: { borderColor: colors.lavender, backgroundColor: colors.lavender + "18" },
   optionChipText: { color: colors.muted, fontSize: 13, fontWeight: "600" },

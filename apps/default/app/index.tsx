@@ -4,7 +4,7 @@ import { useQuery } from "convex/react";
 import { View, ActivityIndicator } from "react-native";
 import { api } from "@/convex/_generated/api";
 import { AuthScreen } from "@/components/revibe/auth-screen";
-import { colors } from "@/lib/revibe-theme";
+import { useTheme } from "@/lib/theme-context";
 
 export default function IndexScreen() {
   return (
@@ -38,8 +38,16 @@ function ProfileGate() {
 }
 
 function LoadingScreen() {
+  const { colors, gradients } = useTheme();
   return (
-    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#F8F6FF" }}>
+    <View
+      style={{
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: gradients.app[0],
+      }}
+    >
       <ActivityIndicator size="large" color={colors.lavender} />
     </View>
   );

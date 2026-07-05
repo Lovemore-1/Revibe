@@ -125,3 +125,26 @@ export const subscriptionStatusReturnValidator = v.object({
   currentPeriodEnd: v.optional(v.number()),
   cancelAtPeriodEnd: v.optional(v.boolean()),
 });
+
+export const recoveryPlanTaskValidator = v.object({
+  id: v.string(),
+  label: v.string(),
+  done: v.boolean(),
+});
+
+export const recoveryPlanPhaseValidator = v.object({
+  name: v.string(),
+  tasks: v.array(recoveryPlanTaskValidator),
+});
+
+export const recoveryPlanValidator = v.object({
+  _id: v.id("recoveryPlans"),
+  _creationTime: v.number(),
+  userId: v.id("users"),
+  title: v.string(),
+  source: v.string(),
+  notes: v.string(),
+  phases: v.array(recoveryPlanPhaseValidator),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+});

@@ -4,7 +4,8 @@ import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useSubscription } from "@/hooks/use-subscription";
-import { colors } from "@/lib/revibe-theme";
+import { type ThemeColors } from "@/lib/revibe-theme";
+import { useTheme, useThemedStyles } from "@/lib/theme-context";
 
 interface SubscriptionGateProps {
   /** Content to show when the user has Pro */
@@ -32,6 +33,7 @@ export function SubscriptionGate({
 }: SubscriptionGateProps) {
   const { isPro, isLoading } = useSubscription();
   const router = useRouter();
+  const styles = useThemedStyles(makeStyles);
 
   if (isLoading) return null;
   if (isPro) return <>{children}</>;
@@ -69,6 +71,8 @@ function LockedCard({
   featureDescription?: string;
   onUpgrade: () => void;
 }) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.card}>
       <LinearGradient
@@ -93,7 +97,7 @@ function LockedCard({
             style={styles.upgradeBtnGradient}
           >
             <Text style={styles.upgradeBtnText}>Upgrade to Pro</Text>
-            <Ionicons name="arrow-forward" size={16} color="#fff" />
+            <Ionicons name="arrow-forward" size={16} color={colors.onAccent} />
           </LinearGradient>
         </TouchableOpacity>
       </LinearGradient>
@@ -101,7 +105,8 @@ function LockedCard({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   card: {
     borderRadius: 16,
     overflow: "hidden",
@@ -157,7 +162,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   upgradeBtnText: {
-    color: "#fff",
+    color: colors.onAccent,
     fontWeight: "700",
     fontSize: 15,
   },

@@ -7,11 +7,13 @@ import {
   TouchableOpacity,
   TextInput,
   RefreshControl,
+  Alert,
 } from "react-native";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Screen, Card, Chip, PrimaryButton, notify } from "@/components/revibe/ui";
-import { colors, moodOptions, postKinds } from "@/lib/revibe-theme";
+import { Screen, Card, Chip, PrimaryButton } from "@/components/revibe/ui";
+import { moodOptions, type ThemeColors } from "@/lib/revibe-theme";
+import { useTheme, useThemedStyles } from "@/lib/theme-context";
 import { Ionicons } from "@expo/vector-icons";
 import type { Id } from "@/convex/_generated/dataModel";
 
@@ -25,6 +27,7 @@ function CommunityCard({
   community: any;
   onToggle: () => void;
 }) {
+  const styles = useThemedStyles(makeStyles);
   return (
     <TouchableOpacity
       style={[styles.communityCard, community.joined && styles.communityCardJoined]}
@@ -58,6 +61,8 @@ function CommunityComposer({
   const [kind, setKind] = useState<string>("update");
   const [loading, setLoading] = useState(false);
   const createPost = useMutation(api.posts.create);
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
 
   const handlePost = async () => {
     if (body.trim().length < 3) return;
@@ -67,7 +72,7 @@ function CommunityComposer({
       setBody("");
       onPost();
     } catch (e: any) {
-      notify("Couldn't post", e.message);
+      Alert.alert("Couldn't post", e.message);
     } finally {
       setLoading(false);
     }
@@ -110,6 +115,8 @@ function CommunityComposer({
 // ---------------------------------------------------------------------------
 function CommunityPostCard({ post }: { post: any }) {
   const toggleLike = useMutation(api.posts.toggleLike);
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [optimisticLiked, setOptimisticLiked] = useState<boolean | null>(null);
   const liked = optimisticLiked !== null ? optimisticLiked : post.likedByMe;
 
@@ -166,6 +173,8 @@ function CommunityPostCard({ post }: { post: any }) {
 export default function CommunitiesScreen() {
   const communities = useQuery(api.communities.list);
   const toggleMembership = useMutation(api.communities.toggleMembership);
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
 
   const [activeCommunity, setActiveCommunity] = useState<string | null>(null);
   const activePosts = useQuery(
@@ -257,14 +266,15 @@ export default function CommunitiesScreen() {
 // ---------------------------------------------------------------------------
 // Styles
 // ---------------------------------------------------------------------------
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   screenTitle: { fontSize: 24, fontWeight: "800", color: colors.ink, paddingHorizontal: 16, marginTop: 8 },
   screenSubtitle: { color: colors.muted, fontSize: 13, paddingHorizontal: 16, marginBottom: 12, marginTop: 4 },
 
   carousel: { paddingHorizontal: 16, marginBottom: 8 },
   communityCard: {
     width: 150,
-    backgroundColor: "#fff",
+    backgroundColor: colors.card,
     borderRadius: 16,
     padding: 14,
     borderWidth: 1.5,
@@ -290,7 +300,7 @@ const styles = StyleSheet.create({
   },
   viewBtnActive: { backgroundColor: colors.lavender },
   viewBtnText: { color: colors.muted, fontSize: 11, fontWeight: "600" },
-  viewBtnTextActive: { color: "#fff" },
+  viewBtnTextActive: { color: colors.onAccent },
 
   feedTitle: { fontWeight: "800", color: colors.ink, fontSize: 18, paddingHorizontal: 16, marginTop: 20, marginBottom: 8 },
   composerCard: { marginBottom: 10 },
@@ -320,7 +330,7 @@ const styles = StyleSheet.create({
   postAvatarText: { color: colors.lavender, fontWeight: "700", fontSize: 14 },
   authorName: { fontWeight: "700", color: colors.ink, fontSize: 14 },
   proBadge: { backgroundColor: colors.lavender, borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 },
-  proBadgeText: { color: "#fff", fontSize: 9, fontWeight: "800" },
+  proBadgeText: { color: colors.onAccent, fontSize: 9, fontWeight: "800" },
   authorMeta: { color: colors.muted, fontSize: 12 },
   postBody: { color: colors.ink, fontSize: 14, lineHeight: 20, marginBottom: 8 },
   moodPill: {

@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -15,12 +16,14 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useOAuthSignIn } from "@/hooks/use-oauth-sign-in";
-import { colors, gradients } from "@/lib/revibe-theme";
-import { notify } from "./ui";
+import { type ThemeColors } from "@/lib/revibe-theme";
+import { useTheme, useThemedStyles } from "@/lib/theme-context";
 
 export function AuthScreen() {
   const { signIn } = useAuthActions();
   const { signInWith } = useOAuthSignIn();
+  const { colors, gradients } = useTheme();
+  const styles = useThemedStyles(makeStyles);
 
   const [mode, setMode] = useState<"signIn" | "signUp">("signIn");
   const [email, setEmail] = useState("");
@@ -29,7 +32,7 @@ export function AuthScreen() {
 
   const handleEmailAuth = async () => {
     if (!email.trim() || !password) {
-      notify("Missing fields", "Please enter your email and password.");
+      Alert.alert("Missing fields", "Please enter your email and password.");
       return;
     }
     setLoading(true);
@@ -40,7 +43,7 @@ export function AuthScreen() {
         flow: mode,
       });
     } catch (err: any) {
-      notify(
+      Alert.alert(
         mode === "signIn" ? "Sign in failed" : "Sign up failed",
         err.message ?? "Please check your details and try again.",
       );
@@ -54,7 +57,7 @@ export function AuthScreen() {
     try {
       await signInWith(provider);
     } catch (err: any) {
-      notify("OAuth error", err.message ?? "Could not sign in.");
+      Alert.alert("OAuth error", err.message ?? "Could not sign in.");
     } finally {
       setLoading(false);
     }
@@ -65,7 +68,7 @@ export function AuthScreen() {
     try {
       await signIn("anonymous");
     } catch (err: any) {
-      notify("Error", err.message);
+      Alert.alert("Error", err.message);
     } finally {
       setLoading(false);
     }
@@ -153,7 +156,7 @@ export function AuthScreen() {
                 style={styles.submitGradient}
               >
                 {loading ? (
-                  <ActivityIndicator color="#fff" />
+                  <ActivityIndicator color={colors.onAccent} />
                 ) : (
                   <Text style={styles.submitText}>
                     {mode === "signIn" ? "Sign In" : "Create Account"}
@@ -201,6 +204,8 @@ function OAuthButton({
   disabled?: boolean;
   dark?: boolean;
 }) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   return (
     <TouchableOpacity
       style={[styles.oauthBtn, dark && styles.oauthBtnDark, disabled && { opacity: 0.6 }]}
@@ -214,7 +219,8 @@ function OAuthButton({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   container: { flex: 1 },
   scroll: {
     flexGrow: 1,
@@ -248,7 +254,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1.5,
     borderColor: colors.soft,
-    backgroundColor: "#fff",
+    backgroundColor: colors.card,
     paddingVertical: 13,
     paddingHorizontal: 20,
     marginBottom: 10,
@@ -272,7 +278,7 @@ const styles = StyleSheet.create({
 
   input: {
     width: "100%",
-    backgroundColor: "#fff",
+    backgroundColor: colors.card,
     borderRadius: 14,
     borderWidth: 1.5,
     borderColor: colors.soft,
@@ -289,7 +295,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  submitText: { color: "#fff", fontWeight: "700", fontSize: 16 },
+  submitText: { color: colors.onAccent, fontWeight: "700", fontSize: 16 },
 
   toggleBtn: { marginTop: 16 },
   toggleText: { color: colors.muted, fontSize: 14 },

@@ -16,7 +16,8 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "@/convex/_generated/api";
 import { Screen, Card } from "@/components/revibe/ui";
-import { colors } from "@/lib/revibe-theme";
+import { type ThemeColors } from "@/lib/revibe-theme";
+import { useTheme, useThemedStyles } from "@/lib/theme-context";
 import { useSubscription } from "@/hooks/use-subscription";
 import type { Id } from "@/convex/_generated/dataModel";
 
@@ -26,6 +27,7 @@ const FREE_CONVERSATION_LIMIT = 3;
 // Buddy card
 // ---------------------------------------------------------------------------
 function BuddyCard({ profile, onMessage }: { profile: any; onMessage: () => void }) {
+  const styles = useThemedStyles(makeStyles);
   return (
     <TouchableOpacity style={styles.buddyCard} onPress={onMessage} activeOpacity={0.85}>
       <View style={styles.buddyAvatar}>
@@ -47,6 +49,7 @@ function BuddyCard({ profile, onMessage }: { profile: any; onMessage: () => void
 // ---------------------------------------------------------------------------
 function ConversationRow({ conv, onPress }: { conv: any; onPress: () => void }) {
   const timeAgo = getTimeAgo(conv.lastMessageAt);
+  const styles = useThemedStyles(makeStyles);
   return (
     <TouchableOpacity style={styles.convRow} onPress={onPress} activeOpacity={0.85}>
       <View style={styles.convAvatar}>
@@ -77,6 +80,8 @@ function ConversationThread({
   const sendMessage = useMutation(api.messages.sendMessage);
   const [body, setBody] = useState("");
   const scrollRef = useRef<ScrollView>(null);
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
 
   const handleSend = async () => {
     const text = body.trim();
@@ -142,7 +147,7 @@ function ConversationThread({
           onPress={handleSend}
           disabled={!body.trim()}
         >
-          <Ionicons name="send" size={18} color="#fff" />
+          <Ionicons name="send" size={18} color={colors.onAccent} />
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -157,6 +162,8 @@ export default function MessagesScreen() {
   const buddies = useQuery(api.profiles.listSupportBuddies);
   const getOrCreate = useMutation(api.messages.getOrCreateConversation);
   const { isPro } = useSubscription();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
 
   const [activeConvId, setActiveConvId] = useState<Id<"conversations"> | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -274,7 +281,8 @@ function getTimeAgo(ts: number): string {
 // ---------------------------------------------------------------------------
 // Styles
 // ---------------------------------------------------------------------------
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   screenTitle: { fontSize: 24, fontWeight: "800", color: colors.ink, paddingHorizontal: 16, marginTop: 8, marginBottom: 12 },
 
   limitBanner: {
@@ -320,7 +328,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    backgroundColor: "#fff",
+    backgroundColor: colors.card,
     borderRadius: 14,
     padding: 12,
     marginRight: 10,
@@ -364,7 +372,7 @@ const styles = StyleSheet.create({
   },
   bubbleMine: { alignSelf: "flex-end", backgroundColor: colors.lavender },
   bubbleText: { fontSize: 15, color: colors.ink },
-  bubbleTextMine: { color: "#fff" },
+  bubbleTextMine: { color: colors.onAccent },
   threadComposer: {
     flexDirection: "row",
     alignItems: "flex-end",
@@ -372,7 +380,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderTopWidth: 1,
     borderTopColor: colors.soft,
-    backgroundColor: "#fff",
+    backgroundColor: colors.card,
   },
   threadInput: {
     flex: 1,

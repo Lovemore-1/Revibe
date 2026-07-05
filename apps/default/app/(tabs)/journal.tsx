@@ -7,12 +7,14 @@ import {
   TouchableOpacity,
   TextInput,
   RefreshControl,
+  Alert,
 } from "react-native";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Screen, Card, PrimaryButton, notify } from "@/components/revibe/ui";
+import { Screen, Card, PrimaryButton } from "@/components/revibe/ui";
 import { SubscriptionGate } from "@/components/revibe/subscription-gate";
-import { colors, moodOptions } from "@/lib/revibe-theme";
+import { moodOptions, type ThemeColors } from "@/lib/revibe-theme";
+import { useTheme, useThemedStyles } from "@/lib/theme-context";
 import { Ionicons } from "@expo/vector-icons";
 
 // ---------------------------------------------------------------------------
@@ -22,13 +24,16 @@ function ScaleSelector({
   label,
   value,
   onChange,
-  color = colors.lavender,
+  color,
 }: {
   label: string;
   value: number;
   onChange: (v: number) => void;
   color?: string;
 }) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
+  const scaleColor = color ?? colors.lavender;
   return (
     <View style={styles.scaleContainer}>
       <Text style={styles.scaleLabel}>{label}</Text>
@@ -38,14 +43,14 @@ function ScaleSelector({
             key={n}
             style={[
               styles.scaleDot,
-              value >= n && { backgroundColor: color },
+              value >= n && { backgroundColor: scaleColor },
               value === n && styles.scaleDotActive,
             ]}
             onPress={() => onChange(n)}
           />
         ))}
       </View>
-      <Text style={[styles.scaleValue, { color }]}>{value}/10</Text>
+      <Text style={[styles.scaleValue, { color: scaleColor }]}>{value}/10</Text>
     </View>
   );
 }
@@ -55,6 +60,8 @@ function ScaleSelector({
 // ---------------------------------------------------------------------------
 function EntryRow({ entry }: { entry: any }) {
   const mood = moodOptions.find((m) => m.value === entry.mood);
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.entryRow}>
       <View style={styles.entryDateCol}>
@@ -83,6 +90,8 @@ function EntryRow({ entry }: { entry: any }) {
 // Stats card (Pro: 30-day trends; Free: 7-day summary)
 // ---------------------------------------------------------------------------
 function StatsCard({ stats }: { stats: any }) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   if (!stats) return null;
   return (
     <Card style={styles.statsCard}>
@@ -107,6 +116,7 @@ function StatsCard({ stats }: { stats: any }) {
 }
 
 function StatItem({ label, value, color }: { label: string; value: number; color: string }) {
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.statItem}>
       <Text style={[styles.statValue, { color }]}>{value.toFixed(1)}</Text>
@@ -122,6 +132,8 @@ export default function JournalScreen() {
   const entries = useQuery(api.journal.listMine);
   const stats = useQuery(api.journal.stats);
   const addEntry = useMutation(api.journal.addEntry);
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
 
   const [mood, setMood] = useState<string>("hopeful");
   const [pain, setPain] = useState(5);
@@ -149,7 +161,7 @@ export default function JournalScreen() {
       setNote("");
       setMilestone("");
     } catch (e: any) {
-      notify("Couldn't save entry", e.message);
+      Alert.alert("Couldn't save entry", e.message);
     } finally {
       setLoading(false);
     }
@@ -267,7 +279,8 @@ function formatDate(dateStr: string): string {
 // ---------------------------------------------------------------------------
 // Styles
 // ---------------------------------------------------------------------------
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   screenTitle: { fontSize: 24, fontWeight: "800", color: colors.ink, paddingHorizontal: 16, marginTop: 8 },
   screenSubtitle: { color: colors.muted, fontSize: 13, paddingHorizontal: 16, marginBottom: 12, marginTop: 4 },
 
@@ -319,7 +332,7 @@ const styles = StyleSheet.create({
     minHeight: 72,
     textAlignVertical: "top",
     marginBottom: 4,
-    backgroundColor: "#fff",
+    backgroundColor: colors.card,
   },
   textInput: {
     borderWidth: 1,
@@ -329,7 +342,7 @@ const styles = StyleSheet.create({
     color: colors.ink,
     fontSize: 14,
     marginBottom: 4,
-    backgroundColor: "#fff",
+    backgroundColor: colors.card,
   },
 
   historyTitle: { fontWeight: "700", color: colors.ink, fontSize: 16, paddingHorizontal: 16, marginTop: 20, marginBottom: 8 },

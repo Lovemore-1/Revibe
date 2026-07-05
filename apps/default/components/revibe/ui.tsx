@@ -4,62 +4,20 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   ActivityIndicator,
   ViewStyle,
-  Alert,
-  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
-import { colors, gradients } from "@/lib/revibe-theme";
+import { type ThemeColors } from "@/lib/revibe-theme";
+import { useTheme, useThemedStyles } from "@/lib/theme-context";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 export function impactLight() {
   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-}
-
-// react-native-web does NOT implement Alert.alert (it's a silent no-op), which
-// breaks every confirmation dialog on web. These fall back to the browser's
-// window.confirm / window.alert on web, and use Alert on native.
-
-export function confirmAction(opts: {
-  title: string;
-  message?: string;
-  confirmText?: string;
-  cancelText?: string;
-  destructive?: boolean;
-  onConfirm: () => void;
-}) {
-  const {
-    title,
-    message,
-    confirmText = "OK",
-    cancelText = "Cancel",
-    destructive,
-    onConfirm,
-  } = opts;
-  if (Platform.OS === "web") {
-    if (typeof window !== "undefined" && window.confirm(message ? `${title}\n\n${message}` : title)) {
-      onConfirm();
-    }
-    return;
-  }
-  Alert.alert(title, message, [
-    { text: cancelText, style: "cancel" },
-    { text: confirmText, style: destructive ? "destructive" : "default", onPress: onConfirm },
-  ]);
-}
-
-export function notify(title: string, message?: string) {
-  if (Platform.OS === "web") {
-    if (typeof window !== "undefined") window.alert(message ? `${title}\n\n${message}` : title);
-    return;
-  }
-  Alert.alert(title, message);
 }
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -69,6 +27,8 @@ export function notify(title: string, message?: string) {
  * Use instead of <View style={{flex:1}}> on every screen.
  */
 export function Screen({ children }: { children: React.ReactNode }) {
+  const { gradients } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   return (
     <LinearGradient colors={gradients.app} style={styles.screen}>
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -81,6 +41,7 @@ export function Screen({ children }: { children: React.ReactNode }) {
 // ─── Header ───────────────────────────────────────────────────────────────────
 
 export function Header({ title, subtitle }: { title: string; subtitle?: string }) {
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.header}>
       <Text style={styles.headerTitle}>{title}</Text>
@@ -98,6 +59,7 @@ export function Card({
   children: React.ReactNode;
   style?: ViewStyle;
 }) {
+  const styles = useThemedStyles(makeStyles);
   return (
     <Animated.View entering={FadeInDown.duration(300).springify()} style={[styles.card, style]}>
       {children}
@@ -118,6 +80,7 @@ export function Chip({
   onPress?: () => void;
   style?: ViewStyle;
 }) {
+  const styles = useThemedStyles(makeStyles);
   return (
     <TouchableOpacity
       style={[styles.chip, active && styles.chipActive, style]}
@@ -147,6 +110,8 @@ export function PrimaryButton({
   disabled?: boolean;
   style?: ViewStyle;
 }) {
+  const { colors, gradients } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   return (
     <TouchableOpacity
       onPress={() => {
@@ -158,13 +123,13 @@ export function PrimaryButton({
       style={[styles.primaryBtnWrapper, (disabled || loading) && { opacity: 0.55 }, style]}
     >
       <LinearGradient
-        colors={[colors.lavender, "#5B3FCC"]}
+        colors={gradients.hero}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={styles.primaryBtnGradient}
       >
         {loading ? (
-          <ActivityIndicator color="#fff" size="small" />
+          <ActivityIndicator color={colors.onAccent} size="small" />
         ) : (
           <Text style={styles.primaryBtnText}>{title}</Text>
         )}
@@ -176,6 +141,7 @@ export function PrimaryButton({
 // ─── StatPill ─────────────────────────────────────────────────────────────────
 
 export function StatPill({ label, value }: { label: string; value: string }) {
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.statPill}>
       <Text style={styles.statPillValue}>{value}</Text>
@@ -187,6 +153,7 @@ export function StatPill({ label, value }: { label: string; value: string }) {
 // ─── EmptyState ───────────────────────────────────────────────────────────────
 
 export function EmptyState({ title, subtitle }: { title: string; subtitle?: string }) {
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.emptyState}>
       <Text style={styles.emptyStateTitle}>{title}</Text>
@@ -202,74 +169,73 @@ export const sharedStyles = StyleSheet.create({
   gap8: { gap: 8 },
   gap12: { gap: 12 },
   flex1: { flex: 1 },
-  textInk: { color: colors.ink },
-  textMuted: { color: colors.muted },
   fontBold: { fontWeight: "700" },
 });
 
-const styles = StyleSheet.create({
-  screen: { flex: 1 },
-  safeArea: { flex: 1 },
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    screen: { flex: 1 },
+    safeArea: { flex: 1 },
 
-  header: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
-  headerTitle: { fontSize: 24, fontWeight: "800", color: colors.ink },
-  headerSubtitle: { fontSize: 13, color: colors.muted, marginTop: 2 },
+    header: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
+    headerTitle: { fontSize: 24, fontWeight: "800", color: colors.ink },
+    headerSubtitle: { fontSize: 13, color: colors.muted, marginTop: 2 },
 
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 16,
-    marginHorizontal: 16,
-    marginBottom: 8,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
+    card: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 16,
+      marginHorizontal: 16,
+      marginBottom: 8,
+      shadowColor: "#000",
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 2,
+    },
 
-  chip: {
-    borderWidth: 1.5,
-    borderColor: colors.soft,
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: "#fff",
-  },
-  chipActive: {
-    borderColor: colors.lavender,
-    backgroundColor: colors.lavender + "18",
-  },
-  chipText: { fontSize: 13, color: colors.muted, fontWeight: "600" },
-  chipTextActive: { color: colors.lavender },
+    chip: {
+      borderWidth: 1.5,
+      borderColor: colors.soft,
+      borderRadius: 20,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      backgroundColor: colors.card,
+    },
+    chipActive: {
+      borderColor: colors.lavender,
+      backgroundColor: colors.lavender + "18",
+    },
+    chipText: { fontSize: 13, color: colors.muted, fontWeight: "600" },
+    chipTextActive: { color: colors.lavender },
 
-  primaryBtnWrapper: {
-    borderRadius: 14,
-    overflow: "hidden",
-    marginTop: 8,
-  },
-  primaryBtnGradient: {
-    paddingVertical: 14,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  primaryBtnText: { color: "#fff", fontWeight: "700", fontSize: 16 },
+    primaryBtnWrapper: {
+      borderRadius: 14,
+      overflow: "hidden",
+      marginTop: 8,
+    },
+    primaryBtnGradient: {
+      paddingVertical: 14,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    primaryBtnText: { color: colors.onAccent, fontWeight: "700", fontSize: 16 },
 
-  statPill: {
-    backgroundColor: colors.lavender + "15",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    alignItems: "center",
-  },
-  statPillValue: { fontWeight: "800", color: colors.lavender, fontSize: 18 },
-  statPillLabel: { color: colors.muted, fontSize: 11, marginTop: 2 },
+    statPill: {
+      backgroundColor: colors.lavender + "15",
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      alignItems: "center",
+    },
+    statPillValue: { fontWeight: "800", color: colors.lavender, fontSize: 18 },
+    statPillLabel: { color: colors.muted, fontSize: 11, marginTop: 2 },
 
-  emptyState: {
-    alignItems: "center",
-    paddingVertical: 40,
-    paddingHorizontal: 32,
-  },
-  emptyStateTitle: { fontWeight: "700", color: colors.ink, fontSize: 16, textAlign: "center" },
-  emptyStateSub: { color: colors.muted, fontSize: 14, marginTop: 6, textAlign: "center" },
-});
+    emptyState: {
+      alignItems: "center",
+      paddingVertical: 40,
+      paddingHorizontal: 32,
+    },
+    emptyStateTitle: { fontWeight: "700", color: colors.ink, fontSize: 16, textAlign: "center" },
+    emptyStateSub: { color: colors.muted, fontSize: 14, marginTop: 6, textAlign: "center" },
+  });

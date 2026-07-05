@@ -3,6 +3,7 @@ import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import * as SecureStore from "expo-secure-store";
 import { Stack } from "expo-router";
 import { Platform } from "react-native";
+import { ThemeProvider } from "@/lib/theme-context";
 
 const convex = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL!, {
   unsavedChangesWarning: false,
@@ -21,20 +22,18 @@ const tokenStorage =
 export default function RootLayout() {
   return (
     <ConvexAuthProvider client={convex} storage={tokenStorage}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="onboarding" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen
-          name="subscription"
-          options={{ presentation: "modal", headerShown: false }}
-        />
-        <Stack.Screen
-          name="support"
-          options={{ presentation: "modal", headerShown: false }}
-        />
-        <Stack.Screen name="coach" options={{ headerShown: false }} />
-      </Stack>
+      <ThemeProvider>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="onboarding" />
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="recovery-plan" />
+          <Stack.Screen
+            name="subscription"
+            options={{ presentation: "modal", headerShown: false }}
+          />
+        </Stack>
+      </ThemeProvider>
     </ConvexAuthProvider>
   );
 }

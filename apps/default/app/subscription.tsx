@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Alert,
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -14,8 +15,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useSubscription } from "@/hooks/use-subscription";
-import { confirmAction, notify } from "@/components/revibe/ui";
-import { colors } from "@/lib/revibe-theme";
+import { type ThemeColors } from "@/lib/revibe-theme";
+import { useTheme, useThemedStyles } from "@/lib/theme-context";
 import * as Haptics from "expo-haptics";
 
 // ---------------------------------------------------------------------------
@@ -75,12 +76,14 @@ const PRO_FEATURES = [
 // ---------------------------------------------------------------------------
 export default function SubscriptionScreen() {
   const router = useRouter();
-  const { isPro, currentPeriodEnd, cancelAtPeriodEnd, freeLaunch } = useSubscription();
+  const { isPro, currentPeriodEnd, cancelAtPeriodEnd } = useSubscription();
   const activateSubscription = useMutation(api.subscriptions.activateSubscription);
   const cancelSubscription = useMutation(api.subscriptions.cancelSubscription);
 
   const [selectedPlan, setSelectedPlan] = useState<"monthly" | "annual">("annual");
   const [loading, setLoading] = useState(false);
+  const { colors, gradients } = useTheme();
+  const styles = useThemedStyles(makeStyles);
 
   // ── Handlers ───────────────────────────────────────────────────────────
 
@@ -107,31 +110,36 @@ export default function SubscriptionScreen() {
       });
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      notify("Welcome to Pro! 🎉", "You now have full access to all Revibe Pro features.");
-      router.back();
+      Alert.alert("Welcome to Pro! 🎉", "You now have full access to all Revibe Pro features.", [
+        { text: "Let's go", onPress: () => router.back() },
+      ]);
     } catch (err: unknown) {
-      notify("Something went wrong", (err as Error).message ?? "Please try again.");
+      Alert.alert("Something went wrong", (err as Error).message ?? "Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleCancel = () => {
-    confirmAction({
-      title: "Cancel subscription?",
-      message: "You'll keep Pro access until the end of your billing period.",
-      confirmText: "Cancel renewal",
-      cancelText: "Keep Pro",
-      destructive: true,
-      onConfirm: async () => {
-        try {
-          await cancelSubscription();
-          notify("Subscription cancelled", "You'll keep access until your period ends.");
-        } catch {
-          notify("Error", "Could not cancel. Please try again.");
-        }
-      },
-    });
+    Alert.alert(
+      "Cancel Subscription?",
+      "You'll keep Pro access until the end of your billing period.",
+      [
+        { text: "Keep Pro", style: "cancel" },
+        {
+          text: "Cancel Renewal",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await cancelSubscription();
+              Alert.alert("Subscription cancelled", "You'll keep access until your period ends.");
+            } catch {
+              Alert.alert("Error", "Could not cancel. Please try again.");
+            }
+          },
+        },
+      ],
+    );
   };
 
   // ── Render ─────────────────────────────────────────────────────────────
@@ -154,7 +162,7 @@ export default function SubscriptionScreen() {
           end={{ x: 1, y: 1 }}
           style={styles.heroBadge}
         >
-          <Ionicons name="ribbon" size={28} color="#fff" />
+          <Ionicons name="ribbon" size={28} color={colors.onAccent} />
         </LinearGradient>
 
         <Text style={styles.heroTitle}>Revibe Pro</Text>
@@ -167,14 +175,8 @@ export default function SubscriptionScreen() {
           <View style={styles.activeCard}>
             <Ionicons name="checkmark-circle" size={20} color={colors.teal} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.activeTitle}>
-                {freeLaunch ? "Full access — free during launch 🎉" : "You're on Revibe Pro 🎉"}
-              </Text>
-              {freeLaunch ? (
-                <Text style={styles.activeSub}>
-                  Everything&apos;s unlocked. No payment or subscription needed.
-                </Text>
-              ) : currentPeriodEnd ? (
+              <Text style={styles.activeTitle}>You're on Revibe Pro 🎉</Text>
+              {currentPeriodEnd ? (
                 <Text style={styles.activeSub}>
                   {cancelAtPeriodEnd ? "Ends" : "Renews"}{" "}
                   {new Date(currentPeriodEnd).toLocaleDateString("en-US", {
@@ -256,11 +258,11 @@ export default function SubscriptionScreen() {
                 style={styles.ctaGradient}
               >
                 {loading ? (
-                  <ActivityIndicator color="#fff" />
+                  <ActivityIndicator color={colors.onAccent} />
                 ) : (
                   <>
                     <Text style={styles.ctaText}>Start Pro</Text>
-                    <Ionicons name="arrow-forward" size={18} color="#fff" />
+                    <Ionicons name="arrow-forward" size={18} color={colors.onAccent} />
                   </>
                 )}
               </LinearGradient>
@@ -276,7 +278,6 @@ export default function SubscriptionScreen() {
             </TouchableOpacity>
           </>
         ) : (
-          !freeLaunch &&
           !cancelAtPeriodEnd && (
             <TouchableOpacity style={styles.cancelLink} onPress={handleCancel}>
               <Text style={styles.cancelLinkText}>Cancel subscription</Text>
@@ -291,7 +292,8 @@ export default function SubscriptionScreen() {
 // ---------------------------------------------------------------------------
 // Styles
 // ---------------------------------------------------------------------------
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.soft },
   scroll: { flex: 1 },
   content: { padding: 24, paddingBottom: 48, alignItems: "center" },
@@ -330,7 +332,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: "#E6FFF9",
+    backgroundColor: colors.teal + "22",
     borderRadius: 14,
     padding: 16,
     width: "100%",
@@ -343,7 +345,7 @@ const styles = StyleSheet.create({
 
   featuresCard: {
     width: "100%",
-    backgroundColor: "#fff",
+    backgroundColor: colors.card,
     borderRadius: 18,
     overflow: "hidden",
     marginBottom: 28,
@@ -393,7 +395,7 @@ const styles = StyleSheet.create({
   },
   planCard: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: colors.card,
     borderRadius: 16,
     padding: 16,
     borderWidth: 2,
@@ -403,7 +405,7 @@ const styles = StyleSheet.create({
   },
   planCardSelected: {
     borderColor: colors.lavender,
-    backgroundColor: "#F4F0FF",
+    backgroundColor: colors.lavender + "18",
   },
   planBadge: {
     position: "absolute",
@@ -413,7 +415,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderBottomLeftRadius: 8,
   },
-  planBadgeText: { color: "#fff", fontSize: 10, fontWeight: "800" },
+  planBadgeText: { color: colors.onAccent, fontSize: 10, fontWeight: "800" },
   planLabel: { color: colors.muted, fontSize: 12, fontWeight: "600", marginBottom: 6 },
   planPrice: { fontSize: 22, fontWeight: "800", color: colors.ink },
   planPeriod: { fontSize: 13, fontWeight: "400", color: colors.muted },
@@ -429,7 +431,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 16,
   },
-  ctaText: { color: "#fff", fontWeight: "800", fontSize: 17 },
+  ctaText: { color: colors.onAccent, fontWeight: "800", fontSize: 17 },
 
   legalText: {
     color: colors.muted,

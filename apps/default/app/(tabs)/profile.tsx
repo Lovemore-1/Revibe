@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
+  Alert,
   RefreshControl,
   Modal,
   KeyboardAvoidingView,
@@ -17,17 +18,26 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { api } from "@/convex/_generated/api";
-import { Screen, Card, StatPill, confirmAction, notify } from "@/components/revibe/ui";
-import { colors, recoveryStages } from "@/lib/revibe-theme";
+import { Screen, Card, StatPill } from "@/components/revibe/ui";
+import { recoveryStages, type ThemeColors } from "@/lib/revibe-theme";
+import { useTheme, useThemedStyles, type ThemePreference } from "@/lib/theme-context";
 import { useSubscription } from "@/hooks/use-subscription";
+
+const THEME_OPTIONS: { value: ThemePreference; label: string; icon: any }[] = [
+  { value: "light", label: "Light", icon: "sunny-outline" },
+  { value: "dark", label: "Dark", icon: "moon-outline" },
+  { value: "system", label: "System", icon: "phone-portrait-outline" },
+];
 
 export default function ProfileScreen() {
   const { signOut } = useAuthActions();
   const router = useRouter();
+  const { colors, preference, setPreference } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const profile = useQuery(api.profiles.getMine);
   const journalStats = useQuery(api.journal.stats);
   const updateProfile = useMutation(api.profiles.updateProfile);
-  const { isPro, freeLaunch } = useSubscription();
+  const { isPro } = useSubscription();
 
   const [refreshing, setRefreshing] = useState(false);
   const [editModal, setEditModal] = useState(false);
@@ -47,7 +57,7 @@ export default function ProfileScreen() {
   const saveEdit = async () => {
     const progress = parseInt(editProgress, 10);
     if (isNaN(progress) || progress < 0 || progress > 100) {
-      notify("Invalid progress", "Enter a number between 0 and 100.");
+      Alert.alert("Invalid progress", "Enter a number between 0 and 100.");
       return;
     }
     setSaving(true);
@@ -59,7 +69,7 @@ export default function ProfileScreen() {
       });
       setEditModal(false);
     } catch (e: any) {
-      notify("Couldn't save", e.message);
+      Alert.alert("Couldn't save", e.message);
     } finally {
       setSaving(false);
     }
@@ -106,7 +116,7 @@ export default function ProfileScreen() {
                   <Text style={styles.displayName}>{profile.displayName}</Text>
                   {isPro && (
                     <View style={styles.proBadge}>
-                      <Ionicons name="ribbon" size={10} color="#fff" />
+                      <Ionicons name="ribbon" size={10} color={colors.onAccent} />
                       <Text style={styles.proBadgeText}>PRO</Text>
                     </View>
                   )}
@@ -189,37 +199,57 @@ export default function ProfileScreen() {
               end={{ x: 1, y: 0 }}
               style={styles.subIconBg}
             >
-              <Ionicons name="ribbon" size={18} color={isPro ? "#fff" : colors.muted} />
+              <Ionicons name="ribbon" size={18} color={isPro ? colors.onAccent : colors.muted} />
             </LinearGradient>
             <View style={{ flex: 1 }}>
               <Text style={styles.subTitle}>{isPro ? "Revibe Pro" : "Upgrade to Pro"}</Text>
               <Text style={styles.subSubtitle}>
-                {freeLaunch
-                  ? "Full access — free during launch 🎉"
-                  : isPro
-                  ? "Manage your subscription"
-                  : "Unlock advanced analytics, unlimited DMs & more"}
+                {isPro ? "Manage your subscription" : "Unlock advanced analytics, unlimited DMs & more"}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={colors.muted} />
           </TouchableOpacity>
         </Card>
 
+        {/* Appearance */}
+        <Card>
+          <Text style={styles.sectionTitle}>Appearance</Text>
+          <View style={styles.themeRow}>
+            {THEME_OPTIONS.map((opt) => (
+              <TouchableOpacity
+                key={opt.value}
+                style={[styles.themeOption, preference === opt.value && styles.themeOptionActive]}
+                onPress={() => setPreference(opt.value)}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name={opt.icon}
+                  size={16}
+                  color={preference === opt.value ? colors.lavender : colors.muted}
+                />
+                <Text
+                  style={[
+                    styles.themeOptionText,
+                    preference === opt.value && styles.themeOptionTextActive,
+                  ]}
+                >
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </Card>
+
         {/* Sign out */}
         <Card>
           <TouchableOpacity
             style={styles.signOutBtn}
-            onPress={() =>
-              confirmAction({
-                title: "Sign out",
-                message: "Are you sure you want to sign out?",
-                confirmText: "Sign out",
-                destructive: true,
-                onConfirm: () => {
-                  void signOut();
-                },
-              })
-            }
+            onPress={() => {
+              Alert.alert("Sign out", "Are you sure you want to sign out?", [
+                { text: "Cancel", style: "cancel" },
+                { text: "Sign out", style: "destructive", onPress: () => signOut() },
+              ]);
+            }}
           >
             <Ionicons name="log-out-outline" size={18} color={colors.coral} />
             <Text style={styles.signOutText}>Sign out</Text>
@@ -288,6 +318,8 @@ export default function ProfileScreen() {
 }
 
 function InfoRow({ icon, label, value }: { icon: any; label: string; value: string }) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.infoRow}>
       <Ionicons name={icon} size={16} color={colors.muted} />
@@ -297,7 +329,8 @@ function InfoRow({ icon, label, value }: { icon: any; label: string; value: stri
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   loadingContainer: { flex: 1, alignItems: "center", justifyContent: "center" },
   loadingText: { color: colors.muted },
 
@@ -325,7 +358,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
-  proBadgeText: { color: "#fff", fontSize: 9, fontWeight: "800", letterSpacing: 0.5 },
+  proBadgeText: { color: colors.onAccent, fontSize: 9, fontWeight: "800", letterSpacing: 0.5 },
   bio: { color: colors.muted, fontSize: 13, marginTop: 3 },
   editBtn: {
     padding: 6,
@@ -335,7 +368,7 @@ const styles = StyleSheet.create({
 
   progressBarBg: {
     height: 8,
-    backgroundColor: "#fff",
+    backgroundColor: colors.card,
     borderRadius: 4,
     overflow: "hidden",
     marginBottom: 4,
@@ -378,6 +411,25 @@ const styles = StyleSheet.create({
   signOutBtn: { flexDirection: "row", alignItems: "center", gap: 8 },
   signOutText: { color: colors.coral, fontWeight: "600", fontSize: 15 },
 
+  themeRow: { flexDirection: "row", gap: 8 },
+  themeOption: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    borderWidth: 1.5,
+    borderColor: colors.soft,
+    borderRadius: 12,
+    paddingVertical: 10,
+  },
+  themeOptionActive: {
+    borderColor: colors.lavender,
+    backgroundColor: colors.lavender + "18",
+  },
+  themeOptionText: { color: colors.muted, fontSize: 13, fontWeight: "600" },
+  themeOptionTextActive: { color: colors.lavender },
+
   // Modal
   modalContainer: { flex: 1, backgroundColor: colors.soft },
   modalHeader: {
@@ -385,7 +437,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     padding: 16,
-    backgroundColor: "#fff",
+    backgroundColor: colors.card,
     borderBottomWidth: 1,
     borderBottomColor: colors.soft,
   },
@@ -401,7 +453,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   fieldInput: {
-    backgroundColor: "#fff",
+    backgroundColor: colors.card,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.soft,

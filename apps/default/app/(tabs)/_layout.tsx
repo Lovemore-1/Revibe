@@ -1,6 +1,6 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { colors } from "@/lib/revibe-theme";
+import { useTheme } from "@/lib/theme-context";
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>["name"];
 
@@ -13,6 +13,7 @@ function TabIcon({
   focused: boolean;
   size: number;
 }) {
+  const { colors } = useTheme();
   return (
     <Ionicons
       name={focused ? name : (`${name}-outline` as IoniconsName)}
@@ -23,6 +24,7 @@ function TabIcon({
 }
 
 export default function TabLayout() {
+  const { colors } = useTheme();
   return (
     <Tabs
       screenOptions={{
@@ -30,7 +32,7 @@ export default function TabLayout() {
         tabBarActiveTintColor: colors.lavender,
         tabBarInactiveTintColor: colors.muted,
         tabBarStyle: {
-          backgroundColor: "#fff",
+          backgroundColor: colors.card,
           borderTopColor: colors.soft,
           borderTopWidth: 1,
         },

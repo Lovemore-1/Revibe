@@ -22,6 +22,7 @@ import type * as model from "../model.js";
 import type * as posts from "../posts.js";
 import type * as profiles from "../profiles.js";
 import type * as rateLimit from "../rateLimit.js";
+import type * as recoveryPlans from "../recoveryPlans.js";
 import type * as subscriptions from "../subscriptions.js";
 import type * as validators from "../validators.js";
 
@@ -46,6 +47,7 @@ declare const fullApi: ApiFromModules<{
   posts: typeof posts;
   profiles: typeof profiles;
   rateLimit: typeof rateLimit;
+  recoveryPlans: typeof recoveryPlans;
   subscriptions: typeof subscriptions;
   validators: typeof validators;
 }>;

@@ -7,14 +7,14 @@ import {
   TouchableOpacity,
   TextInput,
   RefreshControl,
+  Alert,
 } from "react-native";
 import { useMutation, useQuery } from "convex/react";
 import { useRouter } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { api } from "@/convex/_generated/api";
-import { Screen, Card, Chip, PrimaryButton, EmptyState, impactLight, notify } from "@/components/revibe/ui";
-import { colors, gradients, moodOptions, postKinds } from "@/lib/revibe-theme";
+import { Screen, Card, Chip, PrimaryButton, StatPill, EmptyState, impactLight } from "@/components/revibe/ui";
+import { moodOptions, postKinds, type ThemeColors } from "@/lib/revibe-theme";
+import { useTheme, useThemedStyles } from "@/lib/theme-context";
 import { Ionicons } from "@expo/vector-icons";
 import type { Id } from "@/convex/_generated/dataModel";
 
@@ -47,6 +47,8 @@ function Composer({ onPost }: { onPost: () => void }) {
   const [kind, setKind] = useState<string>("update");
   const [loading, setLoading] = useState(false);
   const createPost = useMutation(api.posts.create);
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
 
   const handlePost = async () => {
     if (body.trim().length < 3) return;
@@ -57,7 +59,7 @@ function Composer({ onPost }: { onPost: () => void }) {
       onPost();
       impactLight();
     } catch (e: any) {
-      notify("Couldn't post", e.message);
+      Alert.alert("Couldn't post", e.message);
     } finally {
       setLoading(false);
     }
@@ -112,6 +114,8 @@ function PostCard({ post }: { post: Post }) {
   const [showComments, setShowComments] = useState(false);
   const [optimisticLiked, setOptimisticLiked] = useState<boolean | null>(null);
   const liked = optimisticLiked !== null ? optimisticLiked : post.likedByMe;
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
 
   const handleLike = async () => {
     setOptimisticLiked(!liked);
@@ -129,7 +133,7 @@ function PostCard({ post }: { post: Post }) {
       await addComment({ postId: post._id, body: commentText.trim() });
       setCommentText("");
     } catch (e: any) {
-      notify("Error", e.message);
+      Alert.alert("Error", e.message);
     }
   };
 
@@ -226,30 +230,90 @@ function PostCard({ post }: { post: Post }) {
 }
 
 // ---------------------------------------------------------------------------
+// Recovery plan card
+// ---------------------------------------------------------------------------
+function RecoveryPlanCard() {
+  const plan = useQuery(api.recoveryPlans.getMine);
+  const router = useRouter();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
+
+  if (plan === undefined) return null;
+
+  if (plan === null) {
+    return (
+      <Card style={styles.planCard}>
+        <TouchableOpacity
+          style={styles.planCtaRow}
+          onPress={() => router.push("/recovery-plan")}
+          activeOpacity={0.85}
+        >
+          <View style={styles.planIconBg}>
+            <Ionicons name="clipboard-outline" size={18} color={colors.lavender} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.planCardTitle}>Add your recovery plan</Text>
+            <Text style={styles.planCardSub}>
+              Enter the plan from your physio or surgeon and track it here
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+        </TouchableOpacity>
+      </Card>
+    );
+  }
+
+  const allTasks = plan.phases.flatMap((p) => p.tasks);
+  const done = allTasks.filter((t) => t.done).length;
+  const pct = allTasks.length === 0 ? 0 : Math.round((done / allTasks.length) * 100);
+  const nextTasks = allTasks.filter((t) => !t.done).slice(0, 2);
+
+  return (
+    <Card style={styles.planCard}>
+      <TouchableOpacity onPress={() => router.push("/recovery-plan")} activeOpacity={0.85}>
+        <View style={styles.planCtaRow}>
+          <View style={styles.planIconBg}>
+            <Ionicons name="clipboard-outline" size={18} color={colors.lavender} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.planCardTitle}>{plan.title}</Text>
+            <Text style={styles.planCardSub}>
+              {done}/{allTasks.length} tasks · {pct}% complete
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+        </View>
+        <View style={styles.planProgressBar}>
+          <View style={[styles.planProgressFill, { width: `${pct}%` }]} />
+        </View>
+        {nextTasks.map((t) => (
+          <View key={t.id} style={styles.planNextRow}>
+            <Ionicons name="ellipse-outline" size={12} color={colors.muted} />
+            <Text style={styles.planNextText} numberOfLines={1}>
+              {t.label}
+            </Text>
+          </View>
+        ))}
+      </TouchableOpacity>
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Screen
 // ---------------------------------------------------------------------------
 export default function HomeScreen() {
   const profile = useQuery(api.profiles.getMine);
   const posts = useQuery(api.posts.listFeed);
-  const entries = useQuery(api.journal.listMine);
-  const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     // useQuery is reactive — just wait a tick for the re-render
     setTimeout(() => setRefreshing(false), 600);
   }, []);
-
-  // ── Live rehab streak (consecutive days with a check-in) ──────────────────
-  const entryDates = (entries ?? []).map((e) => e.entryDate);
-  const streak = computeStreak(entryDates);
-  const checkedInToday = entryDates.includes(todayStr());
-  const nextMilestone = STREAK_MILESTONES.find((m) => m > streak) ?? null;
-  const prevMilestone = [...STREAK_MILESTONES].reverse().find((m) => m <= streak) ?? 0;
-  const milestonePct = nextMilestone
-    ? Math.min(100, Math.round(((streak - prevMilestone) / (nextMilestone - prevMilestone)) * 100))
-    : 100;
 
   return (
     <Screen>
@@ -264,96 +328,26 @@ export default function HomeScreen() {
           />
         }
       >
-        {/* Streak hero */}
-        <Animated.View entering={FadeInDown.duration(300).springify()} style={styles.heroWrap}>
-          <LinearGradient
-            colors={gradients.hero}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.hero}
-          >
-            <View style={styles.heroTopRow}>
-              <Text style={styles.heroGreeting}>
-                Hey, {profile?.displayName?.split(" ")[0] ?? "there"} 👋
-              </Text>
-              <View style={styles.heroMilestonePill}>
-                <Ionicons name="ribbon" size={13} color="#fff" />
-                <Text style={styles.heroMilestoneText}>{profile?.milestonesAchieved ?? 0}</Text>
-              </View>
-            </View>
-
-            <View style={styles.streakRow}>
-              <Text style={styles.streakFlame}>🔥</Text>
-              <View>
-                <Text style={styles.streakNumber}>{streak}</Text>
-                <Text style={styles.streakLabel}>
-                  {streak === 0 ? "start your streak today" : "day rehab streak"}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.heroProgressTrack}>
-              <View style={[styles.heroProgressFill, { width: `${milestonePct}%` }]} />
-            </View>
-            <Text style={styles.heroProgressText}>
-              {nextMilestone
-                ? `${nextMilestone - streak} day${nextMilestone - streak === 1 ? "" : "s"} to your ${nextMilestone}-day milestone`
-                : "You've reached every milestone — incredible 🎉"}
+        {/* Hero */}
+        {profile && (
+          <Card style={styles.heroCard}>
+            <Text style={styles.heroGreeting}>
+              Hey, {profile.displayName.split(" ")[0]} 👋
             </Text>
+            <Text style={styles.heroTagline}>Recovery together.</Text>
+            <View style={styles.heroStats}>
+              <StatPill label="Day streak" value={String(profile.recoveryStreak)} />
+              <StatPill label="Milestones" value={String(profile.milestonesAchieved)} />
+              <StatPill label="Progress" value={`${profile.recoveryProgress}%`} />
+            </View>
+            {/* Progress bar */}
+            <View style={styles.progressBar}>
+              <View style={[styles.progressFill, { width: `${profile.recoveryProgress}%` }]} />
+            </View>
+          </Card>
+        )}
 
-            {checkedInToday ? (
-              <View style={styles.checkedInPill}>
-                <Ionicons name="checkmark-circle" size={18} color="#fff" />
-                <Text style={styles.checkedInText}>Checked in today — keep it going</Text>
-              </View>
-            ) : (
-              <TouchableOpacity
-                style={styles.checkInBtn}
-                onPress={() => {
-                  impactLight();
-                  router.push("/journal");
-                }}
-                activeOpacity={0.85}
-              >
-                <Ionicons name="add-circle" size={18} color={colors.lavender} />
-                <Text style={styles.checkInBtnText}>Check in today</Text>
-              </TouchableOpacity>
-            )}
-          </LinearGradient>
-        </Animated.View>
-
-        {/* Recovery coach */}
-        <TouchableOpacity
-          style={styles.coachBtn}
-          onPress={() => {
-            impactLight();
-            router.push("/coach");
-          }}
-          activeOpacity={0.9}
-        >
-          <View style={styles.coachIcon}>
-            <Ionicons name="sparkles" size={18} color="#fff" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.coachTitle}>Talk to your Recovery Coach</Text>
-            <Text style={styles.coachSub}>AI support, any time you need it</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={16} color={colors.lavender} />
-        </TouchableOpacity>
-
-        {/* Tough-day support */}
-        <TouchableOpacity
-          style={styles.toughDayBtn}
-          onPress={() => {
-            impactLight();
-            router.push("/support");
-          }}
-          activeOpacity={0.85}
-        >
-          <Ionicons name="heart-circle" size={20} color={colors.coral} />
-          <Text style={styles.toughDayText}>Having a tough day?</Text>
-          <Ionicons name="chevron-forward" size={16} color={colors.muted} />
-        </TouchableOpacity>
+        <RecoveryPlanCard />
 
         <Composer onPost={() => {}} />
 
@@ -386,147 +380,50 @@ function getTimeAgo(ts: number): string {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-// ── Streak helpers ──────────────────────────────────────────────────────────
-const STREAK_MILESTONES = [3, 7, 14, 30, 60, 90, 180, 365];
-
-/** Today's date as YYYY-MM-DD (UTC, matching how journal entryDate is stored). */
-function todayStr(): string {
-  return new Date().toISOString().split("T")[0];
-}
-
-/**
- * Consecutive-day check-in streak from journal entry dates (YYYY-MM-DD).
- * Today not yet logged doesn't break the streak — it continues from yesterday
- * until a full day is missed.
- */
-function computeStreak(dates: string[]): number {
-  if (dates.length === 0) return 0;
-  const set = new Set(dates);
-  const fmt = (d: Date) => d.toISOString().split("T")[0];
-  const cursor = new Date();
-  if (!set.has(fmt(cursor))) {
-    cursor.setUTCDate(cursor.getUTCDate() - 1);
-    if (!set.has(fmt(cursor))) return 0;
-  }
-  let streak = 0;
-  while (set.has(fmt(cursor))) {
-    streak++;
-    cursor.setUTCDate(cursor.getUTCDate() - 1);
-  }
-  return streak;
-}
-
 // ---------------------------------------------------------------------------
 // Styles
 // ---------------------------------------------------------------------------
-const styles = StyleSheet.create({
-  heroWrap: {
-    marginHorizontal: 16,
-    marginBottom: 12,
-    borderRadius: 20,
-    overflow: "hidden",
-    shadowColor: colors.lavender,
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
-  },
-  hero: { padding: 20 },
-  heroTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  heroGreeting: { fontSize: 16, fontWeight: "800", color: "#fff" },
-  heroMilestonePill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  heroMilestoneText: { color: "#fff", fontWeight: "800", fontSize: 13 },
-  streakRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginTop: 16,
-    marginBottom: 14,
-  },
-  streakFlame: { fontSize: 44 },
-  streakNumber: { color: "#fff", fontSize: 44, fontWeight: "900", lineHeight: 48 },
-  streakLabel: { color: "rgba(255,255,255,0.85)", fontSize: 13, marginTop: -2 },
-  heroProgressTrack: {
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+  heroCard: { marginBottom: 12 },
+  heroGreeting: { fontSize: 20, fontWeight: "800", color: colors.ink },
+  heroTagline: { color: colors.muted, fontSize: 13, marginTop: 2, marginBottom: 14 },
+  heroStats: { flexDirection: "row", gap: 8, marginBottom: 12 },
+  progressBar: {
     height: 6,
-    backgroundColor: "rgba(255,255,255,0.25)",
+    backgroundColor: colors.soft,
     borderRadius: 3,
     overflow: "hidden",
   },
-  heroProgressFill: { height: "100%", backgroundColor: "#fff", borderRadius: 3 },
-  heroProgressText: { color: "rgba(255,255,255,0.9)", fontSize: 12, marginTop: 8 },
-  checkInBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    paddingVertical: 12,
-    marginTop: 16,
+  progressFill: {
+    height: "100%",
+    backgroundColor: colors.lavender,
+    borderRadius: 3,
   },
-  checkInBtnText: { color: colors.lavender, fontWeight: "700", fontSize: 15 },
-  checkedInPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    backgroundColor: "rgba(255,255,255,0.18)",
-    borderRadius: 12,
-    paddingVertical: 12,
-    marginTop: 16,
-  },
-  checkedInText: { color: "#fff", fontWeight: "600", fontSize: 14 },
 
-  coachBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: colors.lavender + "12",
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    marginHorizontal: 16,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: colors.lavender + "33",
-  },
-  coachIcon: {
+  planCard: { marginBottom: 12 },
+  planCtaRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  planIconBg: {
     width: 36,
     height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.lavender,
+    borderRadius: 10,
+    backgroundColor: colors.lavender + "18",
     alignItems: "center",
     justifyContent: "center",
   },
-  coachTitle: { color: colors.ink, fontWeight: "700", fontSize: 14 },
-  coachSub: { color: colors.muted, fontSize: 12, marginTop: 1 },
-
-  toughDayBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    marginHorizontal: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: colors.coral + "33",
+  planCardTitle: { fontWeight: "700", color: colors.ink, fontSize: 15 },
+  planCardSub: { color: colors.muted, fontSize: 12, marginTop: 2 },
+  planProgressBar: {
+    height: 6,
+    backgroundColor: colors.soft,
+    borderRadius: 3,
+    overflow: "hidden",
+    marginTop: 10,
+    marginBottom: 8,
   },
-  toughDayText: { flex: 1, color: colors.ink, fontWeight: "700", fontSize: 14 },
+  planProgressFill: { height: "100%", backgroundColor: colors.teal, borderRadius: 3 },
+  planNextRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 3 },
+  planNextText: { flex: 1, color: colors.muted, fontSize: 13 },
 
   composerCard: { marginBottom: 12 },
   composerLabel: { fontWeight: "700", color: colors.ink, marginBottom: 8 },
@@ -562,7 +459,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
     paddingVertical: 1,
   },
-  proBadgeText: { color: "#fff", fontSize: 9, fontWeight: "800", letterSpacing: 0.5 },
+  proBadgeText: { color: colors.onAccent, fontSize: 9, fontWeight: "800", letterSpacing: 0.5 },
   authorMeta: { color: colors.muted, fontSize: 12, marginTop: 2 },
   kindBadge: {
     backgroundColor: colors.soft,
