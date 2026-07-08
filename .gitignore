@@ -8,3 +8,6 @@ dist/
 
 # Local env file with secrets (kept out of version control)
 .env
+
+# Turborepo cache
+.turbo/
